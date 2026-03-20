@@ -49,10 +49,10 @@ jobs:
         with:
           node-version-file: .nvmrc
       
-      - name: Setup Python
+      - name: Setup Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: "3.x"
+          python-version: "3.11"
       
       - name: Cache node_modules archive
         id: cacheNodeModules
