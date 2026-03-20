@@ -56,7 +56,7 @@ jobs:
       
       - name: Cache node_modules archive
         id: cacheNodeModules
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ".build/node_modules_cache"
           key: "node_modules-${{ runner.os }}-${{ hashFiles('yarn.lock') }}"
