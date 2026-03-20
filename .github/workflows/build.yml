@@ -87,7 +87,7 @@ jobs:
           NODE_OPTIONS: --max-old-space-size=8192
       
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: vscode-build-${{ github.sha }}
           path: |
@@ -97,7 +97,7 @@ jobs:
           compression-level: 6
       
       - name: Upload source maps
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: vscode-sourcemaps-${{ github.sha }}
           path: out/**/*.map
@@ -132,7 +132,7 @@ jobs:
           NODE_OPTIONS: --max-old-space-size=8192
       
       - name: Upload web build
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: vscode-web-${{ github.sha }}
           path: out-vscode-web/

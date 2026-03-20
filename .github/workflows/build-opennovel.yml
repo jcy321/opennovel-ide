@@ -110,7 +110,7 @@ jobs:
           Get-ChildItem -Path ..\VSCode-win32-x64 -Depth 0 | Select-Object Name
       
       - name: Upload Windows x64 artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: opennovel-ide-win32-x64-${{ steps.version.outputs.version }}
           path: .build/win32-x64/*.zip
@@ -162,7 +162,7 @@ jobs:
           zip -r ../opennovel-ide/.build/darwin-$ARCH/OpenNovel-IDE-darwin-$ARCH-$VERSION.zip VSCode-darwin-$ARCH
       
       - name: Upload macOS artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: opennovel-ide-darwin-${{ github.event.inputs.target == 'darwin-arm64' && 'arm64' || 'x64' }}-${{ steps.version.outputs.version }}
           path: .build/darwin-*/OpenNovel-IDE-*.zip
@@ -221,7 +221,7 @@ jobs:
           tar -czf ../opennovel-ide/.build/linux-x64/OpenNovel-IDE-linux-x64-$VERSION.tar.gz VSCode-linux-x64
       
       - name: Upload Linux artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: opennovel-ide-linux-x64-${{ steps.version.outputs.version }}
           path: .build/linux-x64/*.tar.gz
