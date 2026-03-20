@@ -80,13 +80,8 @@ jobs:
           mkdir -Force .build/node_modules_cache
           7z.exe a .build/node_modules_cache/cache.7z -mx3 `@.build/node_modules_list.txt
       
-      - name: Transpile client and extensions
-        run: yarn gulp "transpile-client-swc" "transpile-extensions"
-        env:
-          NODE_OPTIONS: --max-old-space-size=8192
-      
       - name: Build client
-        run: yarn gulp "vscode-win32-x64-min-ci"
+        run: yarn gulp "vscode-win32-x64-min"
         env:
           NODE_OPTIONS: --max-old-space-size=8192
       
@@ -141,11 +136,8 @@ jobs:
       - name: Install dependencies
         run: yarn --frozen-lockfile --network-timeout 300000
       
-      - name: Transpile client and extensions
-        run: yarn gulp "transpile-client-swc" "transpile-extensions"
-      
       - name: Build client
-        run: yarn gulp "vscode-darwin-${{ github.event.inputs.target == 'darwin-arm64' && 'arm64' || 'x64' }}-min-ci"
+        run: yarn gulp "vscode-darwin-${{ github.event.inputs.target == 'darwin-arm64' && 'arm64' || 'x64' }}-min"
       
       - name: Get product version
         id: version
@@ -201,11 +193,8 @@ jobs:
       - name: Install dependencies
         run: yarn --frozen-lockfile --network-timeout 300000
       
-      - name: Transpile client and extensions
-        run: yarn gulp "transpile-client-swc" "transpile-extensions"
-      
       - name: Build client
-        run: yarn gulp "vscode-linux-x64-min-ci"
+        run: yarn gulp "vscode-linux-x64-min"
       
       - name: Get product version
         id: version
