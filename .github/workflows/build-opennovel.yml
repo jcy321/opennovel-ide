@@ -1,0 +1,250 @@
+name: Build OpenNovel IDE
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'extensions/**'
+      - 'build/**'
+      - '.github/workflows/build-opennovel.yml'
+      - 'product.json'
+      - 'package.json'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Build target'
+        required: true
+        default: 'win32-x64'
+        type: choice
+        options:
+          - win32-x64
+          - win32-arm64
+          - darwin-x64
+          - darwin-arm64
+          - linux-x64
+
+jobs:
+  build-windows:
+    name: Build Windows x64
+    runs-on: windows-2022
+    if: github.event.inputs.target == 'win32-x64' || github.event.inputs.target == '' || github.event_name == 'push'
+    timeout-minutes: 120
+    
+    env:
+      CHILD_CONCURRENCY: "1"
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      NODE_OPTIONS: --max-old-space-size=8192
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      
+      - name: Cache node_modules archive
+        id: cacheNodeModules
+        uses: actions/cache@v4
+        with:
+          path: ".build/node_modules_cache"
+          key: "node_modules-${{ runner.os }}-${{ hashFiles('yarn.lock') }}"
+      
+      - name: Extract node_modules archive
+        if: ${{ steps.cacheNodeModules.outputs.cache-hit == 'true' }}
+        run: 7z.exe x .build/node_modules_cache/cache.7z -aos
+      
+      - name: Install dependencies
+        if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+        run: yarn --frozen-lockfile --network-timeout 300000
+      
+      - name: Create node_modules archive
+        if: ${{ steps.cacheNodeModules.outputs.cache-hit != 'true' }}
+        run: |
+          mkdir -Force .build
+          node build/azure-pipelines/common/listNodeModules.js .build/node_modules_list.txt
+          mkdir -Force .build/node_modules_cache
+          7z.exe a .build/node_modules_cache/cache.7z -mx3 `@.build/node_modules_list.txt
+      
+      - name: Transpile client and extensions
+        run: yarn gulp "transpile-client-swc" "transpile-extensions"
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
+      
+      - name: Build client
+        run: yarn gulp "vscode-win32-x64-min-ci"
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
+      
+      - name: Get product version
+        id: version
+        run: |
+          $PackageJson = Get-Content -Raw -Path ..\VSCode-win32-x64\resources\app\package.json | ConvertFrom-Json
+          $Version = $PackageJson.version
+          echo "version=$Version" >> $env:GITHUB_OUTPUT
+          echo "Version: $Version"
+      
+      - name: Create ZIP archive
+        run: |
+          $Version = "${{ steps.version.outputs.version }}"
+          New-Item -ItemType Directory -Path .build\win32-x64 -Force
+          7z.exe a -tzip .build\win32-x64\OpenNovel-IDE-win32-x64-$Version.zip -x!CodeSignSummary*.md ..\VSCode-win32-x64\* -r
+      
+      - name: List output files
+        run: |
+          Get-ChildItem -Path .build\win32-x64 -Recurse | Select-Object FullName
+          Get-ChildItem -Path ..\VSCode-win32-x64 -Depth 0 | Select-Object Name
+      
+      - name: Upload Windows x64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: opennovel-ide-win32-x64-${{ steps.version.outputs.version }}
+          path: .build/win32-x64/*.zip
+          retention-days: 30
+
+  build-macos:
+    name: Build macOS
+    runs-on: macos-13
+    if: github.event.inputs.target == 'darwin-x64' || github.event.inputs.target == 'darwin-arm64'
+    timeout-minutes: 120
+    
+    env:
+      CHILD_CONCURRENCY: "1"
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      NODE_OPTIONS: --max-old-space-size=8192
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      
+      - name: Install dependencies
+        run: yarn --frozen-lockfile --network-timeout 300000
+      
+      - name: Transpile client and extensions
+        run: yarn gulp "transpile-client-swc" "transpile-extensions"
+      
+      - name: Build client
+        run: yarn gulp "vscode-darwin-${{ github.event.inputs.target == 'darwin-arm64' && 'arm64' || 'x64' }}-min-ci"
+      
+      - name: Get product version
+        id: version
+        run: |
+          VERSION=$(grep '"version"' ../VSCode-darwin-*/resources/app/package.json | head -1 | sed 's/.*"version": "\(.*\)".*/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      
+      - name: Create ZIP archive
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          ARCH="${{ github.event.inputs.target == 'darwin-arm64' && 'arm64' || 'x64' }}"
+          mkdir -p .build/darwin-$ARCH
+          cd ..
+          zip -r ../opennovel-ide/.build/darwin-$ARCH/OpenNovel-IDE-darwin-$ARCH-$VERSION.zip VSCode-darwin-$ARCH
+      
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: opennovel-ide-darwin-${{ github.event.inputs.target == 'darwin-arm64' && 'arm64' || 'x64' }}-${{ steps.version.outputs.version }}
+          path: .build/darwin-*/OpenNovel-IDE-*.zip
+          retention-days: 30
+
+  build-linux:
+    name: Build Linux x64
+    runs-on: ubuntu-latest
+    if: github.event.inputs.target == 'linux-x64'
+    timeout-minutes: 120
+    
+    env:
+      CHILD_CONCURRENCY: "1"
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      NODE_OPTIONS: --max-old-space-size=8192
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libx11-dev libxkbfile-dev libsecret-1-dev \
+            libgtk-3-dev libnotify-dev libnss3-dev libkrb5-dev \
+            libxss1 libasound2
+      
+      - name: Install dependencies
+        run: yarn --frozen-lockfile --network-timeout 300000
+      
+      - name: Transpile client and extensions
+        run: yarn gulp "transpile-client-swc" "transpile-extensions"
+      
+      - name: Build client
+        run: yarn gulp "vscode-linux-x64-min-ci"
+      
+      - name: Get product version
+        id: version
+        run: |
+          VERSION=$(grep '"version"' ../VSCode-linux-x64/resources/app/package.json | head -1 | sed 's/.*"version": "\(.*\)".*/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      
+      - name: Create TAR archive
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          mkdir -p .build/linux-x64
+          cd ..
+          tar -czf ../opennovel-ide/.build/linux-x64/OpenNovel-IDE-linux-x64-$VERSION.tar.gz VSCode-linux-x64
+      
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: opennovel-ide-linux-x64-${{ steps.version.outputs.version }}
+          path: .build/linux-x64/*.tar.gz
+          retention-days: 30
+
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [build-windows]
+    if: github.event_name == 'release'
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+      
+      - name: List artifacts
+        run: find artifacts/ -type f
+      
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: artifacts/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
