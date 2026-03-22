@@ -20,9 +20,9 @@ import { BookExplorerView } from 'vs/workbench/contrib/opennovel/browser/views/b
 import { KnowledgeView } from 'vs/workbench/contrib/opennovel/browser/views/knowledgeView';
 import { AgentStatusView } from 'vs/workbench/contrib/opennovel/browser/views/agentStatusView';
 import { ChatPanel } from 'vs/workbench/contrib/opennovel/browser/panels/chatPanel';
-import { registerSingleton } from 'vs/platform/instantiation/common/extensions';
+import { registerSingleton, InstantiationType } from 'vs/platform/instantiation/common/extensions';
 
-registerSingleton(IOpenNovelService, OpenNovelService);
+registerSingleton(IOpenNovelService, OpenNovelService, InstantiationType.Delayed);
 
 const openNovelViewContainer = Registry.as<IViewContainersRegistry>(ViewExtensions.ViewContainersRegistry).registerViewContainer({
 	id: OPENNOVEL_VIEW_CONTAINER_ID,
@@ -97,4 +97,4 @@ class OpenNovelContribution implements IWorkbenchContribution {
 }
 
 Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench)
-	.registerWorkbenchContribution(OpenNovelContribution, LifecyclePhase.Starting);
+	.registerWorkbenchContribution(OpenNovelContribution, LifecyclePhase.Restored);

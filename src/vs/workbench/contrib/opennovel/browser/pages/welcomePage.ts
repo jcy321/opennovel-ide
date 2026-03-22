@@ -4,15 +4,17 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { EditorInput } from 'vs/workbench/common/editor/editorInput';
-import { EditorModel } from 'vs/workbench/common/editor/editorModel';
 import { EditorPane } from 'vs/workbench/browser/parts/editor/editorPane';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { IStorageService } from 'vs/platform/storage/common/storage';
 import { IOpenNovelService, OPENNOVEL_SERVER_URL } from 'vs/workbench/contrib/opennovel/common/opennovel';
 import { $, addDisposableListener, EventType, clearNode } from 'vs/base/browser/dom';
-import { IEditorGroup } from 'vs/workbench/services/editor/common/editorGroupsService';
 import { DisposableStore } from 'vs/base/common/lifecycle';
+import { URI } from 'vs/base/common/uri';
+import { IEditorOptions } from 'vs/platform/editor/common/editor';
+import { IEditorOpenContext } from 'vs/workbench/common/editor';
+import { CancellationToken } from 'vs/base/common/cancellation';
 
 export const WELCOME_PAGE_ID = 'opennovel.welcome';
 
@@ -21,6 +23,10 @@ export class WelcomePageInput extends EditorInput {
 
 	override get typeId(): string {
 		return WelcomePageInput.ID;
+	}
+
+	override get resource(): URI | undefined {
+		return undefined;
 	}
 
 	override getName(): string {
@@ -174,7 +180,7 @@ export class WelcomePage extends EditorPane {
 		return card;
 	}
 
-	override setInput(input: WelcomePageInput, options: unknown, context: unknown, token: unknown): Promise<void> {
+	override setInput(input: WelcomePageInput, options: IEditorOptions | undefined, context: IEditorOpenContext, token: CancellationToken): Promise<void> {
 		return super.setInput(input, options, context, token);
 	}
 
