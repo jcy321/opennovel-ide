@@ -7,6 +7,27 @@ import { Emitter, Event } from 'vs/base/common/event';
 import { Disposable } from 'vs/base/common/lifecycle';
 import { IOpenNovelService, Book, Chapter, Agent, KnowledgeBase, ChatMessage, OPENNOVEL_SERVER_URL } from 'vs/workbench/contrib/opennovel/common/opennovel';
 import { ILogService } from 'vs/platform/log/common/log';
+import { IHttpClient } from 'vs/workbench/contrib/opennovel/browser/services/httpClient';
+
+interface HealthResponse {
+	status: string;
+}
+
+interface BooksResponse {
+	books: Book[];
+}
+
+interface AgentsResponse {
+	agents: Agent[];
+}
+
+interface ChaptersResponse {
+	chapters: Chapter[];
+}
+
+interface KnowledgeResponse {
+	knowledgeBases: KnowledgeBase[];
+}
 
 export class OpenNovelService extends Disposable implements IOpenNovelService {
 	declare readonly _serviceBrand: undefined;
@@ -36,7 +57,8 @@ export class OpenNovelService extends Disposable implements IOpenNovelService {
 	get messages(): ChatMessage[] { return this._messages; }
 
 	constructor(
-		@ILogService private readonly logService: ILogService
+		@ILogService private readonly logService: ILogService,
+		@IHttpClient private readonly httpClient: IHttpClient
 	) {
 		super();
 		this.autoConnect();
@@ -45,7 +67,7 @@ export class OpenNovelService extends Disposable implements IOpenNovelService {
 	private async autoConnect(): Promise<void> {
 		try {
 			await this.connect(this._serverUrl);
-		} catch (e) {
+		} catch {
 			this.logService.info('[OpenNovel] Auto-connect failed, user must connect manually');
 		}
 	}
@@ -54,12 +76,9 @@ export class OpenNovelService extends Disposable implements IOpenNovelService {
 		this._serverUrl = serverUrl;
 
 		try {
-			const response = await fetch(`${serverUrl}/api/health`, {
-				method: 'GET',
-				headers: { 'Content-Type': 'application/json' }
-			});
+			const response = await this.httpClient.get<HealthResponse>(`${serverUrl}/api/health`);
 
-			if (response.ok) {
+			if (response.status === 'ok' || response) {
 				this._isConnected = true;
 				this._onDidChangeConnection.fire(true);
 				this.logService.info('[OpenNovel] Connected to server:', serverUrl);
@@ -114,13 +133,10 @@ export class OpenNovelService extends Disposable implements IOpenNovelService {
 
 	async getBooks(): Promise<Book[]> {
 		try {
-			const response = await fetch(`${this._serverUrl}/api/books`);
-			if (response.ok) {
-				const data = await response.json();
-				this._books = data.books || data || [];
-				this._onDidChangeBooks.fire(this._books);
-				return this._books;
-			}
+			const response = await this.httpClient.get<BooksResponse>(`${this._serverUrl}/api/books`);
+			this._books = response.books || [];
+			this._onDidChangeBooks.fire(this._books);
+			return this._books;
 		} catch (e) {
 			this.logService.error('[OpenNovel] Failed to get books:', e);
 		}
@@ -128,40 +144,20 @@ export class OpenNovelService extends Disposable implements IOpenNovelService {
 	}
 
 	async createBook(book: Partial<Book>): Promise<Book> {
-		const response = await fetch(`${this._serverUrl}/api/books`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(book)
-		});
-
-		if (!response.ok) {
-			throw new Error(`Failed to create book: ${response.statusText}`);
-		}
-
-		const newBook = await response.json();
+		const newBook = await this.httpClient.post<Book>(`${this._serverUrl}/api/books`, book);
 		await this.getBooks();
 		return newBook;
 	}
 
 	async deleteBook(id: string): Promise<void> {
-		const response = await fetch(`${this._serverUrl}/api/books/${id}`, {
-			method: 'DELETE'
-		});
-
-		if (!response.ok) {
-			throw new Error(`Failed to delete book: ${response.statusText}`);
-		}
-
+		await this.httpClient.delete(`${this._serverUrl}/api/books/${id}`);
 		await this.getBooks();
 	}
 
 	async getChapters(bookId: string): Promise<Chapter[]> {
 		try {
-			const response = await fetch(`${this._serverUrl}/api/books/${bookId}/chapters`);
-			if (response.ok) {
-				const data = await response.json();
-				return data.chapters || data || [];
-			}
+			const response = await this.httpClient.get<ChaptersResponse>(`${this._serverUrl}/api/books/${bookId}/chapters`);
+			return response.chapters || [];
 		} catch (e) {
 			this.logService.error('[OpenNovel] Failed to get chapters:', e);
 		}
@@ -169,28 +165,15 @@ export class OpenNovelService extends Disposable implements IOpenNovelService {
 	}
 
 	async createChapter(bookId: string, chapter: Partial<Chapter>): Promise<Chapter> {
-		const response = await fetch(`${this._serverUrl}/api/books/${bookId}/chapters`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(chapter)
-		});
-
-		if (!response.ok) {
-			throw new Error(`Failed to create chapter: ${response.statusText}`);
-		}
-
-		return await response.json();
+		return this.httpClient.post<Chapter>(`${this._serverUrl}/api/books/${bookId}/chapters`, chapter);
 	}
 
 	async getAgents(): Promise<Agent[]> {
 		try {
-			const response = await fetch(`${this._serverUrl}/api/agents/status`);
-			if (response.ok) {
-				const data = await response.json();
-				this._agents = data.agents || data || [];
-				this._onDidChangeAgents.fire(this._agents);
-				return this._agents;
-			}
+			const response = await this.httpClient.get<AgentsResponse>(`${this._serverUrl}/api/agents/status`);
+			this._agents = response.agents || [];
+			this._onDidChangeAgents.fire(this._agents);
+			return this._agents;
 		} catch (e) {
 			this.logService.error('[OpenNovel] Failed to get agents:', e);
 		}
@@ -199,11 +182,8 @@ export class OpenNovelService extends Disposable implements IOpenNovelService {
 
 	async getKnowledgeBase(bookId: string): Promise<KnowledgeBase[]> {
 		try {
-			const response = await fetch(`${this._serverUrl}/api/books/${bookId}/knowledge`);
-			if (response.ok) {
-				const data = await response.json();
-				return data.knowledgeBases || data || [];
-			}
+			const response = await this.httpClient.get<KnowledgeResponse>(`${this._serverUrl}/api/books/${bookId}/knowledge`);
+			return response.knowledgeBases || [];
 		} catch (e) {
 			this.logService.error('[OpenNovel] Failed to get knowledge base:', e);
 		}
@@ -211,14 +191,6 @@ export class OpenNovelService extends Disposable implements IOpenNovelService {
 	}
 
 	async sendMessage(bookId: string, content: string, agentId?: string): Promise<void> {
-		const response = await fetch(`${this._serverUrl}/api/chat/messages`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ bookId, content, agentId })
-		});
-
-		if (!response.ok) {
-			throw new Error(`Failed to send message: ${response.statusText}`);
-		}
+		await this.httpClient.post(`${this._serverUrl}/api/chat/messages`, { bookId, content, agentId });
 	}
 }

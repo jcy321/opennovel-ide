@@ -55,8 +55,7 @@ export class OpenNovelStatus extends Disposable implements IWorkbenchContributio
 				? localize('opennovelConnectedTooltip', "OpenNovel IDE is connected to backend server")
 				: localize('opennovelDisconnectedTooltip', "Click to connect to OpenNovel server"),
 			command: 'opennovel.connectServer',
-			kind: 'prominent',
-			showInAllWindows: true
+			kind: 'prominent'
 		};
 	}
 

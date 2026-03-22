@@ -16,12 +16,17 @@ import { MenuId, registerAction2, Action2 } from 'vs/platform/actions/common/act
 import { ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
 import { IOpenNovelService, OPENNOVEL_VIEW_CONTAINER_ID, BOOKS_VIEW_ID, KNOWLEDGE_VIEW_ID, AGENT_VIEW_ID, CHAT_VIEW_ID, CONNECT_SERVER_COMMAND_ID } from 'vs/workbench/contrib/opennovel/common/opennovel';
 import { OpenNovelService } from 'vs/workbench/contrib/opennovel/browser/services/opennovelService';
+import { IHttpClient, HttpClient } from 'vs/workbench/contrib/opennovel/browser/services/httpClient';
+import { IOpenNovelMainService, OpenNovelMainService } from 'vs/workbench/contrib/opennovel/browser/services/opennovelMainService';
+import { OpenNovelStatus } from 'vs/workbench/contrib/opennovel/browser/statusbar/opennovelStatus';
 import { BookExplorerView } from 'vs/workbench/contrib/opennovel/browser/views/bookExplorerView';
 import { KnowledgeView } from 'vs/workbench/contrib/opennovel/browser/views/knowledgeView';
 import { AgentStatusView } from 'vs/workbench/contrib/opennovel/browser/views/agentStatusView';
 import { ChatPanel } from 'vs/workbench/contrib/opennovel/browser/panels/chatPanel';
 import { registerSingleton, InstantiationType } from 'vs/platform/instantiation/common/extensions';
 
+registerSingleton(IHttpClient, HttpClient, InstantiationType.Delayed);
+registerSingleton(IOpenNovelMainService, OpenNovelMainService, InstantiationType.Delayed);
 registerSingleton(IOpenNovelService, OpenNovelService, InstantiationType.Delayed);
 
 const openNovelViewContainer = Registry.as<IViewContainersRegistry>(ViewExtensions.ViewContainersRegistry).registerViewContainer({
@@ -98,3 +103,6 @@ class OpenNovelContribution implements IWorkbenchContribution {
 
 Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench)
 	.registerWorkbenchContribution(OpenNovelContribution, LifecyclePhase.Restored);
+
+Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench)
+	.registerWorkbenchContribution(OpenNovelStatus, LifecyclePhase.Restored);

@@ -4,56 +4,68 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
+import { IOpenerService } from 'vs/platform/opener/common/opener';
+import { IFileDialogService } from 'vs/platform/dialogs/common/dialogs';
+import { IFileService } from 'vs/platform/files/common/files';
+import { ILogService } from 'vs/platform/log/common/log';
+import { URI } from 'vs/base/common/uri';
+import { VSBuffer } from 'vs/base/common/buffer';
 
 export const IOpenNovelMainService = createDecorator<IOpenNovelMainService>('opennovelMainService');
 
-export interface IOpenNovelMainService {
-	readonly _serviceBrand: undefined;
-
-	selectFolder(options?: { title?: string; defaultPath?: string }): Promise<string | undefined>;
-	selectFile(options?: { title?: string; defaultPath?: string; filters?: FileFilter[] }): Promise<string | undefined>;
-	openExternal(url: string): Promise<void>;
-	readFile(path: string): Promise<string>;
-	writeFile(path: string, content: string): Promise<void>;
-	exists(path: string): Promise<boolean>;
-	ensureDir(path: string): Promise<void>;
+export interface ExportOptions {
+	format: 'txt' | 'md' | 'pdf' | 'epub';
+	includeMetadata?: boolean;
 }
 
-export interface FileFilter {
-	name: string;
-	extensions: string[];
+export interface IOpenNovelMainService {
+	readonly _serviceBrand: undefined;
+	openExternal(url: string): Promise<void>;
+	selectExportPath(defaultName: string): Promise<URI | undefined>;
+	exportContent(content: string, uri: URI): Promise<void>;
 }
 
 export class OpenNovelMainService implements IOpenNovelMainService {
 	declare readonly _serviceBrand: undefined;
 
-	async selectFolder(options?: { title?: string; defaultPath?: string }): Promise<string | undefined> {
-		return undefined;
-	}
-
-	async selectFile(options?: { title?: string; defaultPath?: string; filters?: FileFilter[] }): Promise<string | undefined> {
-		return undefined;
-	}
+	constructor(
+		@IOpenerService private readonly openerService: IOpenerService,
+		@IFileDialogService private readonly fileDialogService: IFileDialogService,
+		@IFileService private readonly fileService: IFileService,
+		@ILogService private readonly logService: ILogService
+	) { }
 
 	async openExternal(url: string): Promise<void> {
-		if (typeof window !== 'undefined') {
-			window.open(url, '_blank');
+		try {
+			await this.openerService.open(URI.parse(url));
+		} catch (e) {
+			this.logService.error('[OpenNovel] Failed to open external URL:', e);
 		}
 	}
 
-	async readFile(path: string): Promise<string> {
-		throw new Error('readFile not available in browser context');
+	async selectExportPath(defaultName: string): Promise<URI | undefined> {
+		try {
+			const result = await this.fileDialogService.showSaveDialog({
+				defaultUri: URI.file(defaultName),
+				filters: [
+					{ name: 'Text File', extensions: ['txt'] },
+					{ name: 'Markdown', extensions: ['md'] }
+				]
+			});
+			return result;
+		} catch (e) {
+			this.logService.error('[OpenNovel] Failed to select export path:', e);
+			return undefined;
+		}
 	}
 
-	async writeFile(path: string, content: string): Promise<void> {
-		throw new Error('writeFile not available in browser context');
-	}
-
-	async exists(path: string): Promise<boolean> {
-		return false;
-	}
-
-	async ensureDir(path: string): Promise<void> {
-		throw new Error('ensureDir not available in browser context');
+	async exportContent(content: string, uri: URI): Promise<void> {
+		try {
+			await this.fileService.writeFile(uri, VSBuffer.fromString(content));
+			this.logService.info('[OpenNovel] Content exported to:', uri.toString());
+		} catch (e) {
+			this.logService.error('[OpenNovel] Failed to export content:', e);
+			throw e;
+		}
 	}
 }
