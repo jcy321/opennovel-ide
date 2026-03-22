@@ -6,9 +6,8 @@
 import { Disposable } from 'vs/base/common/lifecycle';
 import { localize } from 'vs/nls';
 import { IWorkbenchContribution } from 'vs/workbench/common/contributions';
-import { IStatusbarService, StatusbarAlignment, IStatusbarEntryAccessor } from 'vs/workbench/services/statusbar/browser/statusbar';
+import { IStatusbarService, StatusbarAlignment, IStatusbarEntryAccessor, IStatusbarEntry } from 'vs/workbench/services/statusbar/browser/statusbar';
 import { IOpenNovelService } from 'vs/workbench/contrib/opennovel/common/opennovel';
-import { Codicon } from 'vs/base/common/codicons';
 
 export class OpenNovelStatus extends Disposable implements IWorkbenchContribution {
 	private static readonly ID = 'status.opennovel';
@@ -39,7 +38,7 @@ export class OpenNovelStatus extends Disposable implements IWorkbenchContributio
 		);
 	}
 
-	private getStatusEntry() {
+	private getStatusEntry(): IStatusbarEntry {
 		const connected = this.opennovelService.isConnected;
 		const agents = this.opennovelService.agents;
 		const activeAgents = agents.filter(a => a.status === 'active').length;
