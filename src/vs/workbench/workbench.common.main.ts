@@ -388,8 +388,5 @@ import 'vs/workbench/contrib/share/browser/share.contribution';
 
 // Account Entitlements
 import 'vs/workbench/contrib/accountEntitlements/browser/accountsEntitlements.contribution';
-import 'vs/workbench/contrib/opennovel/browser/services/httpClient';
-import 'vs/workbench/contrib/opennovel/browser/services/opennovelMainService';
-import 'vs/workbench/contrib/opennovel/browser/statusbar/opennovelStatus';
 
 //#endregion
