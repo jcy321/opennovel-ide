@@ -45,6 +45,11 @@ export class HttpClient implements IHttpClient {
 	private async request<T>(method: string, url: string, body?: object): Promise<T> {
 		let lastError: Error | null = null;
 
+		this.logService.info(`[HttpClient] >>> ${method} ${url}`);
+		if (body) {
+			this.logService.info(`[HttpClient] >>> Body:`, JSON.stringify(body));
+		}
+
 		for (let attempt = 0; attempt <= this.retries; attempt++) {
 			try {
 				const controller = new AbortController();
@@ -59,19 +64,28 @@ export class HttpClient implements IHttpClient {
 
 				clearTimeout(timeoutId);
 
+				this.logService.info(`[HttpClient] <<< ${method} ${url} Status: ${response.status} ${response.statusText}`);
+
 				if (!response.ok) {
+					const errorText = await response.text();
+					this.logService.error(`[HttpClient] <<< Error response body:`, errorText);
 					throw new Error(`HTTP ${response.status}: ${response.statusText}`);
 				}
 
 				const text = await response.text();
+				this.logService.info(`[HttpClient] <<< Response body:`, text || '(empty)');
+
 				if (!text) {
 					return {} as T;
 				}
 
-				return JSON.parse(text) as T;
+				const parsed = JSON.parse(text) as T;
+				this.logService.info(`[HttpClient] <<< Parsed JSON successfully`);
+				return parsed;
 			} catch (error) {
 				lastError = error instanceof Error ? error : new Error(String(error));
-				this.logService.warn(`[HttpClient] ${method} ${url} failed (attempt ${attempt + 1}):`, lastError.message);
+				this.logService.error(`[HttpClient] ${method} ${url} failed (attempt ${attempt + 1}):`, lastError.message);
+				this.logService.error(`[HttpClient] Error stack:`, lastError.stack || 'no stack');
 
 				if (attempt < this.retries) {
 					await this.delay(1000 * (attempt + 1));

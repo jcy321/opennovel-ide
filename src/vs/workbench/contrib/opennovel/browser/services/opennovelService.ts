@@ -74,9 +74,16 @@ export class OpenNovelService extends Disposable implements IOpenNovelService {
 
 	async connect(serverUrl: string): Promise<boolean> {
 		this._serverUrl = serverUrl;
+		const healthUrl = `${serverUrl}/api/health`;
+
+		this.logService.info('[OpenNovel] ========== CONNECT START ==========');
+		this.logService.info('[OpenNovel] Server URL:', serverUrl);
+		this.logService.info('[OpenNovel] Health check URL:', healthUrl);
 
 		try {
-			const response = await this.httpClient.get<HealthResponse>(`${serverUrl}/api/health`);
+			this.logService.info('[OpenNovel] Calling httpClient.get...');
+			const response = await this.httpClient.get<HealthResponse>(healthUrl);
+			this.logService.info('[OpenNovel] Health response received:', JSON.stringify(response));
 
 			if (response.status === 'ok' || response) {
 				this._isConnected = true;
@@ -89,10 +96,15 @@ export class OpenNovelService extends Disposable implements IOpenNovelService {
 				]);
 
 				this.setupSSE();
+				this.logService.info('[OpenNovel] ========== CONNECT SUCCESS ==========');
 				return true;
 			}
 		} catch (e) {
-			this.logService.error('[OpenNovel] Connection failed:', e);
+			const error = e instanceof Error ? e : new Error(String(e));
+			this.logService.error('[OpenNovel] ========== CONNECT FAILED ==========');
+			this.logService.error('[OpenNovel] Error message:', error.message);
+			this.logService.error('[OpenNovel] Error stack:', error.stack || 'no stack');
+			this.logService.error('[OpenNovel] Server URL was:', serverUrl);
 		}
 
 		this._isConnected = false;
