@@ -14,7 +14,9 @@ import { Codicon } from 'vs/base/common/codicons';
 import { ContextKeyExpr } from 'vs/platform/contextkey/common/contextkey';
 import { MenuId, registerAction2, Action2 } from 'vs/platform/actions/common/actions';
 import { ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
-import { IOpenNovelService, OPENNOVEL_VIEW_CONTAINER_ID, BOOKS_VIEW_ID, KNOWLEDGE_VIEW_ID, AGENT_VIEW_ID, CHAT_VIEW_ID, CONNECT_SERVER_COMMAND_ID } from 'vs/workbench/contrib/opennovel/common/opennovel';
+import { IDialogService } from 'vs/platform/dialogs/common/dialogs';
+import { INotificationService, Severity } from 'vs/platform/notification/common/notification';
+import { IOpenNovelService, OPENNOVEL_VIEW_CONTAINER_ID, BOOKS_VIEW_ID, KNOWLEDGE_VIEW_ID, AGENT_VIEW_ID, CHAT_VIEW_ID, CONNECT_SERVER_COMMAND_ID, OPENNOVEL_SERVER_URL } from 'vs/workbench/contrib/opennovel/common/opennovel';
 import { OpenNovelService } from 'vs/workbench/contrib/opennovel/browser/services/opennovelService';
 import { IHttpClient, HttpClient } from 'vs/workbench/contrib/opennovel/browser/services/httpClient';
 import { IOpenNovelMainService, OpenNovelMainService } from 'vs/workbench/contrib/opennovel/browser/services/opennovelMainService';
@@ -89,7 +91,47 @@ registerAction2(class ConnectServerAction extends Action2 {
 
 	async run(accessor: ServicesAccessor): Promise<void> {
 		const opennovelService = accessor.get(IOpenNovelService);
-		await opennovelService.connect('http://localhost:6688');
+		const dialogService = accessor.get(IDialogService);
+		const notificationService = accessor.get(INotificationService);
+
+		const result = await dialogService.input({
+			title: localize('connectServerTitle', "Connect to OpenNovel Server"),
+			message: localize('connectServerMessage', "Enter the OpenNovel backend server address"),
+			inputs: [{
+				type: 'text',
+				value: OPENNOVEL_SERVER_URL,
+				placeholder: 'http://localhost:6688'
+			}],
+			primaryButton: localize('connectButton', "Connect")
+		});
+
+		if (!result.confirmed || !result.values?.[0]) {
+			return;
+		}
+
+		const serverUrl = result.values[0].trim();
+
+		notificationService.prompt(
+			Severity.Info,
+			localize('connecting', "Connecting to {0}...", serverUrl),
+			[]
+		);
+
+		const success = await opennovelService.connect(serverUrl);
+
+		if (success) {
+			notificationService.prompt(
+				Severity.Info,
+				localize('connectSuccess', "Successfully connected to OpenNovel server"),
+				[]
+			);
+		} else {
+			notificationService.prompt(
+				Severity.Error,
+				localize('connectFailed', "Connection failed. Please check the server address or ensure the backend is running."),
+				[]
+			);
+		}
 	}
 });
 
