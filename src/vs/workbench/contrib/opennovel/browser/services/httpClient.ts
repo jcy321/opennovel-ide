@@ -5,6 +5,9 @@
 
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 import { ILogService } from 'vs/platform/log/common/log';
+import { IRequestService } from 'vs/platform/request/common/request';
+import { CancellationToken } from 'vs/base/common/cancellation';
+import { IHeaders } from 'vs/base/parts/request/common/request';
 
 export const IHttpClient = createDecorator<IHttpClient>('opennovelHttpClient');
 
@@ -19,11 +22,11 @@ export interface IHttpClient {
 export class HttpClient implements IHttpClient {
 	declare readonly _serviceBrand: undefined;
 
-	private readonly timeout = 30000;
 	private readonly retries = 2;
 
 	constructor(
-		@ILogService private readonly logService: ILogService
+		@ILogService private readonly logService: ILogService,
+		@IRequestService private readonly requestService: IRequestService
 	) { }
 
 	async get<T>(url: string): Promise<T> {
@@ -52,27 +55,34 @@ export class HttpClient implements IHttpClient {
 
 		for (let attempt = 0; attempt <= this.retries; attempt++) {
 			try {
-				const controller = new AbortController();
-				const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+				const headers: IHeaders = {
+					'Content-Type': 'application/json'
+				};
 
-				const response = await fetch(url, {
-					method,
-					headers: { 'Content-Type': 'application/json' },
-					body: body ? JSON.stringify(body) : undefined,
-					signal: controller.signal
-				});
+				const options = {
+					type: method as 'GET' | 'POST' | 'PUT' | 'DELETE',
+					url,
+					headers,
+					data: body ? JSON.stringify(body) : undefined
+				};
 
-				clearTimeout(timeoutId);
+				this.logService.info(`[HttpClient] Using IRequestService for request...`);
+				
+				const context = await this.requestService.request(options, CancellationToken.None);
 
-				this.logService.info(`[HttpClient] <<< ${method} ${url} Status: ${response.status} ${response.statusText}`);
+				this.logService.info(`[HttpClient] <<< ${method} ${url} Status: ${context.res.statusCode}`);
 
-				if (!response.ok) {
-					const errorText = await response.text();
-					this.logService.error(`[HttpClient] <<< Error response body:`, errorText);
-					throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+				if (!context.res.statusCode || context.res.statusCode >= 400) {
+					throw new Error(`HTTP ${context.res.statusCode || 'unknown'}`);
 				}
 
-				const text = await response.text();
+				const text = await new Promise<string>((resolve, reject) => {
+					let data = '';
+					context.stream.on('data', (chunk: Buffer) => data += chunk.toString());
+					context.stream.on('end', () => resolve(data));
+					context.stream.on('error', reject);
+				});
+
 				this.logService.info(`[HttpClient] <<< Response body:`, text || '(empty)');
 
 				if (!text) {
@@ -85,7 +95,6 @@ export class HttpClient implements IHttpClient {
 			} catch (error) {
 				lastError = error instanceof Error ? error : new Error(String(error));
 				this.logService.error(`[HttpClient] ${method} ${url} failed (attempt ${attempt + 1}):`, lastError.message);
-				this.logService.error(`[HttpClient] Error stack:`, lastError.stack || 'no stack');
 
 				if (attempt < this.retries) {
 					await this.delay(1000 * (attempt + 1));
