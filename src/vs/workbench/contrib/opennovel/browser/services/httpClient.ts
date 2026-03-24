@@ -5,9 +5,8 @@
 
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 import { ILogService } from 'vs/platform/log/common/log';
-import { IRequestService } from 'vs/platform/request/common/request';
+import { IRequestService, asText } from 'vs/platform/request/common/request';
 import { CancellationToken } from 'vs/base/common/cancellation';
-import { IHeaders } from 'vs/base/parts/request/common/request';
 
 export const IHttpClient = createDecorator<IHttpClient>('opennovelHttpClient');
 
@@ -55,14 +54,10 @@ export class HttpClient implements IHttpClient {
 
 		for (let attempt = 0; attempt <= this.retries; attempt++) {
 			try {
-				const headers: IHeaders = {
-					'Content-Type': 'application/json'
-				};
-
 				const options = {
 					type: method as 'GET' | 'POST' | 'PUT' | 'DELETE',
 					url,
-					headers,
+					headers: { 'Content-Type': 'application/json' },
 					data: body ? JSON.stringify(body) : undefined
 				};
 
@@ -76,13 +71,7 @@ export class HttpClient implements IHttpClient {
 					throw new Error(`HTTP ${context.res.statusCode || 'unknown'}`);
 				}
 
-				const text = await new Promise<string>((resolve, reject) => {
-					let data = '';
-					context.stream.on('data', (chunk: Buffer) => data += chunk.toString());
-					context.stream.on('end', () => resolve(data));
-					context.stream.on('error', reject);
-				});
-
+				const text = await asText(context);
 				this.logService.info(`[HttpClient] <<< Response body:`, text || '(empty)');
 
 				if (!text) {
