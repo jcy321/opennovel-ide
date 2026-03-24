@@ -15,7 +15,7 @@ import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { IOpenerService } from 'vs/platform/opener/common/opener';
 import { IOpenNovelService, Book } from 'vs/workbench/contrib/opennovel/common/opennovel';
-import { $, addDisposableListener, EventType, clearNode } from 'vs/base/browser/dom';
+import { $, addDisposableListener, EventType } from 'vs/base/browser/dom';
 import { IListVirtualDelegate, IListRenderer } from 'vs/base/browser/ui/list/list';
 import { List } from 'vs/base/browser/ui/list/listWidget';
 import { DisposableStore } from 'vs/base/common/lifecycle';
@@ -112,7 +112,7 @@ export class BookExplorerView extends ViewPane {
 			const title = result.values[0].trim();
 			if (title) {
 				try {
-					await this.opennovelService.createBook({ name: title, title });
+					await this.opennovelService.createBook({ name: title });
 					this.notificationService.prompt(Severity.Info, `书籍 "${title}" 创建成功`, []);
 				} catch (e) {
 					this.notificationService.prompt(Severity.Error, `创建失败: ${e}`, []);
