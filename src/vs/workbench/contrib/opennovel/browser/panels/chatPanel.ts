@@ -14,10 +14,9 @@ import { IOpenerService } from 'vs/platform/opener/common/opener';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IOpenNovelService, ChatMessage, CHAT_VIEW_ID } from 'vs/workbench/contrib/opennovel/common/opennovel';
-import { $, addDisposableListener, EventType, clearNode, reset } from 'vs/base/browser/dom';
+import { $, addDisposableListener, EventType, clearNode } from 'vs/base/browser/dom';
 import { DisposableStore } from 'vs/base/common/lifecycle';
 import { Emitter, Event } from 'vs/base/common/event';
-import { DomEmitter } from 'vs/base/browser/event';
 
 interface ThinkingState {
 	isExpanded: boolean;
@@ -149,39 +148,6 @@ export class ChatPanel extends ViewPane {
 		if (!content.trim() || !this.currentBookId) return;
 		
 		await this.opennovelService.sendMessage(this.currentBookId, content);
-	}
-
-	private renderMessage(message: ChatMessage): void {
-		const messageEl = $('.chat-message');
-		
-		const header = $('.chat-message-header');
-		
-		const avatar = $('.chat-message-avatar');
-		avatar.textContent = message.agentName.charAt(0);
-		header.appendChild(avatar);
-
-		const name = $('.chat-message-agent-name');
-		name.textContent = message.agentName;
-		header.appendChild(name);
-
-		const time = $('.chat-message-time');
-		time.textContent = new Date(message.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-		header.appendChild(time);
-
-		messageEl.appendChild(header);
-
-		if (message.thinking) {
-			const thinking = $('.chat-message-thinking');
-			thinking.textContent = `💭 ${message.thinking}`;
-			messageEl.appendChild(thinking);
-		}
-
-		const content = $('.chat-message-content');
-		content.textContent = message.content;
-		messageEl.appendChild(content);
-
-		this.messagesContainer.appendChild(messageEl);
-		this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
 	}
 
 	setBook(bookId: string): void {
