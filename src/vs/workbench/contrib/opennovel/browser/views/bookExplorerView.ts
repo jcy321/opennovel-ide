@@ -15,10 +15,12 @@ import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { IOpenerService } from 'vs/platform/opener/common/opener';
 import { IOpenNovelService, Book } from 'vs/workbench/contrib/opennovel/common/opennovel';
-import { $, addDisposableListener, EventType } from 'vs/base/browser/dom';
+import { $, addDisposableListener, EventType, clearNode } from 'vs/base/browser/dom';
 import { IListVirtualDelegate, IListRenderer } from 'vs/base/browser/ui/list/list';
 import { List } from 'vs/base/browser/ui/list/listWidget';
 import { DisposableStore } from 'vs/base/common/lifecycle';
+import { IDialogService } from 'vs/platform/dialogs/common/dialogs';
+import { INotificationService, Severity } from 'vs/platform/notification/common/notification';
 
 export class BookExplorerView extends ViewPane {
 
@@ -26,6 +28,8 @@ export class BookExplorerView extends ViewPane {
 	static readonly TITLE = localize('books', "Books");
 
 	private list!: List<Book>;
+	private listContainer!: HTMLElement;
+	private headerContainer!: HTMLElement;
 	private readonly disposables = this._register(new DisposableStore());
 
 	constructor(
@@ -39,7 +43,9 @@ export class BookExplorerView extends ViewPane {
 		@IOpenerService openerService: IOpenerService,
 		@IThemeService themeService: IThemeService,
 		@ITelemetryService telemetryService: ITelemetryService,
-		@IOpenNovelService private readonly opennovelService: IOpenNovelService
+		@IOpenNovelService private readonly opennovelService: IOpenNovelService,
+		@IDialogService private readonly dialogService: IDialogService,
+		@INotificationService private readonly notificationService: INotificationService
 	) {
 		super(options, keybindingService, contextMenuService, configurationService, contextKeyService, viewDescriptorService, instantiationService, openerService, themeService, telemetryService);
 
@@ -50,10 +56,26 @@ export class BookExplorerView extends ViewPane {
 	protected override renderBody(container: HTMLElement): void {
 		super.renderBody(container);
 
+		this.headerContainer = $('.book-explorer-header');
+		const createButton = $('button.create-book-button');
+		createButton.textContent = '+ 新建书籍';
+		createButton.style.cssText = 'width: 100%; padding: 8px; margin-bottom: 8px; cursor: pointer; border: 1px solid var(--vscode-button-border); background: var(--vscode-button-background); color: var(--vscode-button-foreground); border-radius: 4px;';
+		
+		this.disposables.add(addDisposableListener(createButton, EventType.CLICK, () => {
+			this.createBook();
+		}));
+
+		this.headerContainer.appendChild(createButton);
+		container.appendChild(this.headerContainer);
+
+		this.listContainer = $('.book-list-container');
+		this.listContainer.style.cssText = 'flex: 1; overflow: hidden;';
+		container.appendChild(this.listContainer);
+
 		const delegate = new BookListDelegate();
 		const renderer = new BookListRenderer();
 
-		this.list = this._register(new List('opennovel-books', container, delegate, [renderer], {
+		this.list = this._register(new List('opennovel-books', this.listContainer, delegate, [renderer], {
 			identityProvider: { getId: (book: Book) => book.id },
 			mouseSupport: true,
 			multipleSelectionSupport: false
@@ -68,6 +90,35 @@ export class BookExplorerView extends ViewPane {
 		}));
 
 		this.updateList();
+	}
+
+	private async createBook(): Promise<void> {
+		if (!this.opennovelService.isConnected) {
+			this.notificationService.prompt(Severity.Warning, '请先连接服务器', []);
+			return;
+		}
+
+		const result = await this.dialogService.input({
+			title: '创建新书',
+			message: '请输入书名',
+			inputs: [{
+				type: 'text',
+				placeholder: '例如：仙侠传说'
+			}],
+			primaryButton: '创建'
+		});
+
+		if (result.confirmed && result.values?.[0]) {
+			const title = result.values[0].trim();
+			if (title) {
+				try {
+					await this.opennovelService.createBook({ name: title, title });
+					this.notificationService.prompt(Severity.Info, `书籍 "${title}" 创建成功`, []);
+				} catch (e) {
+					this.notificationService.prompt(Severity.Error, `创建失败: ${e}`, []);
+				}
+			}
+		}
 	}
 
 	private updateList(): void {
@@ -86,7 +137,8 @@ export class BookExplorerView extends ViewPane {
 
 	protected override layoutBody(height: number, width: number): void {
 		super.layoutBody(height, width);
-		this.list.layout(height, width);
+		const headerHeight = 48;
+		this.list.layout(height - headerHeight, width);
 	}
 }
 
