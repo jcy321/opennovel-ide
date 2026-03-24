@@ -56,6 +56,11 @@ jobs:
           path: node_modules
           key: node-modules-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
       
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libkrb5-dev
+      
       - name: Install dependencies
         run: yarn --frozen-lockfile --network-timeout 300000
       
