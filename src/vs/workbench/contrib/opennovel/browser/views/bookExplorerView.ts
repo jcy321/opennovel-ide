@@ -29,7 +29,7 @@ export class BookExplorerView extends ViewPane {
 
 	private list!: List<Book>;
 	private listContainer!: HTMLElement;
-	private headerContainer!: HTMLElement;
+	private explorerHeader!: HTMLElement;
 	private readonly disposables = this._register(new DisposableStore());
 
 	constructor(
@@ -56,7 +56,7 @@ export class BookExplorerView extends ViewPane {
 	protected override renderBody(container: HTMLElement): void {
 		super.renderBody(container);
 
-		this.headerContainer = $('.book-explorer-header');
+		this.explorerHeader = $('.book-explorer-header');
 		const createButton = $('button.create-book-button');
 		createButton.textContent = '+ 新建书籍';
 		createButton.style.cssText = 'width: 100%; padding: 8px; margin-bottom: 8px; cursor: pointer; border: 1px solid var(--vscode-button-border); background: var(--vscode-button-background); color: var(--vscode-button-foreground); border-radius: 4px;';
@@ -65,8 +65,8 @@ export class BookExplorerView extends ViewPane {
 			this.createBook();
 		}));
 
-		this.headerContainer.appendChild(createButton);
-		container.appendChild(this.headerContainer);
+		this.explorerHeader.appendChild(createButton);
+		container.appendChild(this.explorerHeader);
 
 		this.listContainer = $('.book-list-container');
 		this.listContainer.style.cssText = 'flex: 1; overflow: hidden;';
