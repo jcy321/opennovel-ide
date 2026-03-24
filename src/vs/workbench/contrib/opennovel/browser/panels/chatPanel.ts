@@ -14,8 +14,15 @@ import { IOpenerService } from 'vs/platform/opener/common/opener';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IOpenNovelService, ChatMessage, CHAT_VIEW_ID } from 'vs/workbench/contrib/opennovel/common/opennovel';
-import { $, addDisposableListener, EventType, clearNode } from 'vs/base/browser/dom';
+import { $, addDisposableListener, EventType, clearNode, reset } from 'vs/base/browser/dom';
 import { DisposableStore } from 'vs/base/common/lifecycle';
+import { Emitter, Event } from 'vs/base/common/event';
+import { DomEmitter } from 'vs/base/browser/event';
+
+interface ThinkingState {
+	isExpanded: boolean;
+	content: string;
+}
 
 export class ChatPanel extends ViewPane {
 	static readonly ID = CHAT_VIEW_ID;
@@ -25,7 +32,11 @@ export class ChatPanel extends ViewPane {
 	private inputContainer!: HTMLElement;
 	private currentBookId: string | null = null;
 	private messages: ChatMessage[] = [];
+	private thinkingStates: Map<string, ThinkingState> = new Map();
 	private readonly disposables = this._register(new DisposableStore());
+
+	private readonly _onDidChangeMessages = this._register(new Emitter<ChatMessage[]>());
+	readonly onDidChangeMessages: Event<ChatMessage[]> = this._onDidChangeMessages.event;
 
 	constructor(
 		options: IViewPaneOptions,
@@ -51,6 +62,15 @@ export class ChatPanel extends ViewPane {
 	protected override renderBody(container: HTMLElement): void {
 		super.renderBody(container);
 
+		// 创建标签页容器
+		const tabContainer = $('.chat-tabs');
+		const welcomeTab = $('.chat-tab', { tabindex: '0' }, '欢迎');
+		const groupChatTab = $('.chat-tab.active', { tabindex: '0' }, '群聊');
+		
+		tabContainer.appendChild(welcomeTab);
+		tabContainer.appendChild(groupChatTab);
+		container.appendChild(tabContainer);
+
 		this.container = $('.chat-panel');
 		container.appendChild(this.container);
 
@@ -62,6 +82,19 @@ export class ChatPanel extends ViewPane {
 		this.container.appendChild(this.inputContainer);
 
 		this.renderEmptyState();
+
+	// 标签切换事件
+		this.disposables.add(addDisposableListener(welcomeTab, EventType.CLICK, () => {
+			welcomeTab.classList.add('active');
+			groupChatTab.classList.remove('active');
+			this.showWelcomePage();
+		}));
+
+		this.disposables.add(addDisposableListener(groupChatTab, EventType.CLICK, () => {
+			groupChatTab.classList.add('active');
+			welcomeTab.classList.remove('active');
+			this.showChatPage();
+		}));
 	}
 
 	private renderEmptyState(): void {
@@ -154,8 +187,102 @@ export class ChatPanel extends ViewPane {
 	setBook(bookId: string): void {
 		this.currentBookId = bookId;
 		this.messages = [];
+		this.thinkingStates.clear();
 		clearNode(this.messagesContainer);
 		this.renderEmptyState();
+	}
+
+	private showWelcomePage(): void {
+		clearNode(this.messagesContainer);
+		this.inputContainer.style.display = 'none';
+		this.renderEmptyState();
+	}
+
+	private showChatPage(): void {
+		this.inputContainer.style.display = 'flex';
+		if (this.currentBookId) {
+			this.messages.forEach(msg => this.renderMessage(msg));
+		} else {
+			this.renderEmptyState();
+		}
+	}
+
+	private renderMessage(message: ChatMessage): void {
+		clearNode(this.messagesContainer);
+
+		const messageEl = $('.chat-message', { 'data-role': 'assistant' });
+
+		const header = $('.chat-message-header');
+
+		const avatar = $('.chat-message-avatar', { 'data-agent': message.agentName });
+		avatar.textContent = message.agentName.charAt(0);
+		header.appendChild(avatar);
+
+		const name = $('.chat-message-agent-name');
+		name.textContent = message.agentName;
+		header.appendChild(name);
+
+		const time = $('.chat-message-time');
+		time.textContent = new Date(message.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+		header.appendChild(time);
+
+		messageEl.appendChild(header);
+
+		if (message.thinking) {
+			const thinking = this.renderThinking(message.id, message.thinking);
+			messageEl.appendChild(thinking);
+		}
+
+		const content = $('.chat-message-content');
+		content.innerHTML = this.formatMessageContent(message.content);
+		messageEl.appendChild(content);
+
+		this.messagesContainer.appendChild(messageEl);
+		this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+	}
+
+	private renderThinking(messageId: string, thinking: string): HTMLElement {
+		const state = this.thinkingStates.get(messageId) || { isExpanded: false, content: thinking };
+		this.thinkingStates.set(messageId, state);
+
+		const thinkingEl = $('.chat-message-thinking');
+		if (state.isExpanded) {
+			thinkingEl.classList.add('expanded');
+		}
+
+		const collapsedText = thinking.length > 50 ? thinking.substring(0, 50) + '...' : thinking;
+		thinkingEl.textContent = state.isExpanded ? '💭 思考过程' : `💭 ${collapsedText}`;
+
+		if (state.isExpanded) {
+			const contentEl = $('.chat-message-thinking-content');
+			contentEl.textContent = thinking;
+			thinkingEl.appendChild(contentEl);
+		}
+
+		this.disposables.add(addDisposableListener(thinkingEl, EventType.CLICK, () => {
+			state.isExpanded = !state.isExpanded;
+			this.thinkingStates.set(messageId, state);
+			this.refreshMessages();
+		}));
+
+		return thinkingEl;
+	}
+
+	private formatMessageContent(content: string): string {
+		return content
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>')
+			.replace(/`([^`]+)`/g, '<code>$1</code>')
+			.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+			.replace(/\*([^*]+)\*/g, '<em>$1</em>')
+			.replace(/\n/g, '<br>');
+	}
+
+	private refreshMessages(): void {
+		clearNode(this.messagesContainer);
+		this.messages.forEach(msg => this.renderMessage(msg));
 	}
 
 	protected override layoutBody(height: number, width: number): void {

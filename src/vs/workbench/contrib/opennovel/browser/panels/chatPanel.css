@@ -1,0 +1,361 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) OpenNovel IDE. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+/* ============== 群聊面板主容器 ============== */
+.chat-panel {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	overflow: hidden;
+}
+
+/* 标签页 */
+.chat-tabs {
+	display: flex;
+	gap: 2px;
+	padding: 8px 16px 0;
+	background: var(--vscode-editor-background);
+	border-bottom: 1px solid var(--vscode-widget-border);
+}
+
+.chat-tab {
+	padding: 8px 16px;
+	background: transparent;
+	color: var(--vscode-descriptionForeground);
+	border: 1px solid transparent;
+	border-bottom: none;
+	border-radius: 6px 6px 0 0;
+	cursor: pointer;
+	font-size: 13px;
+	font-weight: 500;
+	transition: all 0.2s ease;
+	user-select: none;
+}
+
+.chat-tab:hover {
+	background: var(--vscode-tab-hoverBackground);
+	color: var(--vscode-tab-hoverForeground);
+}
+
+.chat-tab.active {
+	background: var(--vscode-tab-activeBackground);
+	color: var(--vscode-tab-activeForeground);
+	border-color: var(--vscode-widget-border);
+	border-bottom-color: var(--vscode-tab-activeBackground);
+}
+
+.chat-tab:focus {
+	outline: 2px solid var(--vscode-focusBorder);
+	outline-offset: -2px;
+}
+
+.chat-messages {
+	flex: 1;
+	overflow-y: auto;
+	padding: 16px;
+	background: var(--vscode-editor-background);
+}
+
+.chat-empty {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+	color: var(--vscode-descriptionForeground);
+	font-size: 14px;
+}
+
+/* ============== 消息容器 ============== */
+.chat-message {
+	display: flex;
+	flex-direction: column;
+	margin-bottom: 16px;
+	animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+/* ============== 消息头部（头像 + 名称 + 时间） ============== */
+.chat-message-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 6px;
+}
+
+/* 头像样式 */
+.chat-message-avatar {
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-weight: bold;
+	font-size: 16px;
+	color: white;
+	flex-shrink: 0;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Agent 头像颜色映射 */
+.chat-message-avatar[data-agent="天道"] {
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.chat-message-avatar[data-agent="规划者"] {
+	background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.chat-message-avatar[data-agent="执笔"] {
+	background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.chat-message-avatar[data-agent="刘和平"] {
+	background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+.chat-message-avatar[data-agent="世界观守护者"] {
+	background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+}
+
+.chat-message-avatar[data-agent="审阅"] {
+	background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+}
+
+.chat-message-avatar[data-agent="观察者"] {
+	background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+}
+
+.chat-message-avatar[data-agent="调研者"] {
+	background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+}
+
+/* Agent 名称 */
+.chat-message-agent-name {
+	font-weight: 600;
+	font-size: 14px;
+	color: var(--vscode-foreground);
+}
+
+/* 时间戳 */
+.chat-message-time {
+	font-size: 12px;
+	color: var(--vscode-descriptionForeground);
+	margin-left: auto;
+}
+
+/* ============== 思考过程（可折叠） ============== */
+.chat-message-thinking {
+	margin-left: 52px;
+	margin-bottom: 8px;
+	padding: 12px 16px;
+	background: var(--vscode-textBlockQuoteBackground);
+	border-left: 3px solid var(--vscode-textSeparator-foreground);
+	border-radius: 6px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	font-size: 13px;
+	color: var(--vscode-descriptionForeground);
+}
+
+.chat-message-thinking:hover {
+	background: var(--vscode-editor-selectionBackground);
+}
+
+.chat-message-thinking.expanded {
+	background: var(--vscode-editor-selectionBackground);
+}
+
+.chat-message-thinking::before {
+	content: '💭 ';
+	margin-right: 6px;
+}
+
+.chat-message-thinking-collapsed {
+	color: var(--vscode-foreground);
+	font-style: italic;
+}
+
+.chat-message-thinking-content {
+	margin-top: 8px;
+	padding-top: 8px;
+	border-top: 1px solid var(--vscode-widget-border);
+	white-space: pre-wrap;
+	line-height: 1.6;
+}
+
+/* ============== 消息内容气泡 ============== */
+.chat-message-content {
+	margin-left: 52px;
+	padding: 12px 16px;
+	background: var(--vscode-button-background);
+	color: var(--vscode-button-foreground);
+	border-radius: 12px;
+	border-top-left-radius: 4px;
+	max-width: calc(100% - 60px);
+	word-wrap: break-word;
+	line-height: 1.6;
+	font-size: 14px;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* 用户消息样式（不同颜色） */
+.chat-message[data-role="user"] .chat-message-content {
+	background: var(--vscode-button-secondaryBackground);
+	color: var(--vscode-button-secondaryForeground);
+	border-top-left-radius: 12px;
+	border-top-right-radius: 4px;
+}
+
+/* 富文本支持 */
+.chat-message-content code {
+	background: rgba(0, 0, 0, 0.1);
+	padding: 2px 6px;
+	border-radius: 4px;
+	font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+	font-size: 13px;
+}
+
+.chat-message-content pre {
+	background: rgba(0, 0, 0, 0.15);
+	padding: 12px;
+	border-radius: 6px;
+	overflow-x: auto;
+	margin: 8px 0;
+}
+
+.chat-message-content pre code {
+	background: transparent;
+	padding: 0;
+}
+
+.chat-message-content blockquote {
+	border-left: 3px solid var(--vscode-textSeparator-foreground);
+	margin: 8px 0;
+	padding-left: 12px;
+	color: var(--vscode-descriptionForeground);
+}
+
+.chat-message-content ul,
+.chat-message-content ol {
+	margin: 8px 0;
+	padding-left: 24px;
+}
+
+.chat-message-content strong {
+	font-weight: 600;
+}
+
+.chat-message-content em {
+	font-style: italic;
+}
+
+/* ============== 输入区域 ============== */
+.chat-input-container {
+	padding: 12px 16px;
+	background: var(--vscode-editor-background);
+	border-top: 1px solid var(--vscode-widget-border);
+}
+
+.chat-input-wrapper {
+	display: flex;
+	gap: 8px;
+	align-items: flex-end;
+}
+
+.chat-input {
+	flex: 1;
+	min-height: 40px;
+	max-height: 120px;
+	padding: 8px 12px;
+	border: 1px solid var(--vscode-input-border);
+	border-radius: 8px;
+	background: var(--vscode-input-background);
+	color: var(--vscode-input-foreground);
+	font-family: inherit;
+	font-size: 14px;
+	resize: none;
+	line-height: 1.5;
+}
+
+.chat-input:focus {
+	outline: 2px solid var(--vscode-focusBorder);
+	border-color: transparent;
+}
+
+.chat-input::placeholder {
+	color: var(--vscode-input-placeholderForeground);
+}
+
+.chat-send-button {
+	padding: 8px 20px;
+	height: 40px;
+	background: var(--vscode-button-background);
+	color: var(--vscode-button-foreground);
+	border: none;
+	border-radius: 8px;
+	cursor: pointer;
+	font-weight: 600;
+	font-size: 14px;
+	transition: background 0.2s ease;
+}
+
+.chat-send-button:hover {
+	background: var(--vscode-button-hoverBackground);
+}
+
+.chat-send-button:active {
+	transform: translateY(1px);
+}
+
+/* ============== 滚动条样式 ============== */
+.chat-messages::-webkit-scrollbar {
+	width: 8px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+	background: var(--vscode-scrollbarSlider-background);
+	border-radius: 4px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+	background: var(--vscode-scrollbarSlider-hoverBackground);
+}
+
+/* ============== 响应式设计 ============== */
+@media (max-width: 600px) {
+	.chat-message-avatar {
+		width: 32px;
+		height: 32px;
+		font-size: 14px;
+	}
+
+	.chat-message-thinking,
+	.chat-message-content {
+		margin-left: 44px;
+	}
+
+	.chat-message-agent-name {
+		font-size: 13px;
+	}
+
+	.chat-message-time {
+		font-size: 11px;
+	}
+}
