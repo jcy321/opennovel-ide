@@ -15,6 +15,7 @@ import { URI } from 'vs/base/common/uri';
 import { IEditorOptions } from 'vs/platform/editor/common/editor';
 import { IEditorOpenContext } from 'vs/workbench/common/editor';
 import { CancellationToken } from 'vs/base/common/cancellation';
+import { generateUuid } from 'vs/base/common/uuid';
 
 export const WELCOME_PAGE_ID = 'opennovel.welcome';
 
@@ -55,6 +56,23 @@ export class WelcomePage extends EditorPane {
 
 	protected createEditor(parent: HTMLElement): void {
 		this.container = $('.welcome-page');
+		
+		// 加载 CSS
+		const style = $('style');
+		style.id = `welcome-page-style-${generateUuid()}`;
+		style.textContent = `
+			.welcome-page {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				height: 100%;
+				padding: 40px;
+				background: var(--vscode-editor-background);
+				font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans Sans", "Noto Sans CJK SC", "Microsoft YaHei", "SimHei", "WenQuanYi Micro Hei", sans-serif;
+			}
+		`;
+		parent.appendChild(style);
+		
 		parent.appendChild(this.container);
 		this.render();
 	}
