@@ -160,6 +160,9 @@ import 'vs/workbench/contrib/splash/browser/splash.contribution';
 // Remote Start Entry for the Web
 import 'vs/workbench/contrib/remote/browser/remoteStartEntry.contribution';
 
+// OpenNovel IDE
+import 'vs/workbench/contrib/opennovel/browser/opennovel.contribution';
+
 //#endregion
 
 
