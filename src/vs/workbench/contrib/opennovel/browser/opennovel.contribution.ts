@@ -48,6 +48,7 @@ Registry.as<IViewsRegistry>(ViewExtensions.ViewsRegistry).registerViews([
 		containerIcon: Codicon.book,
 		ctorDescriptor: new SyncDescriptor(BookExplorerView),
 		canToggleVisibility: true,
+		hideByDefault: false,
 		order: 1
 	},
 	{
@@ -56,6 +57,7 @@ Registry.as<IViewsRegistry>(ViewExtensions.ViewsRegistry).registerViews([
 		containerIcon: Codicon.database,
 		ctorDescriptor: new SyncDescriptor(KnowledgeView),
 		canToggleVisibility: true,
+		hideByDefault: false,
 		order: 2
 	},
 	{
@@ -64,6 +66,7 @@ Registry.as<IViewsRegistry>(ViewExtensions.ViewsRegistry).registerViews([
 		containerIcon: Codicon.robot,
 		ctorDescriptor: new SyncDescriptor(AgentStatusView),
 		canToggleVisibility: true,
+		hideByDefault: false,
 		order: 3
 	},
 	{
@@ -72,6 +75,7 @@ Registry.as<IViewsRegistry>(ViewExtensions.ViewsRegistry).registerViews([
 		containerIcon: Codicon.commentDiscussion,
 		ctorDescriptor: new SyncDescriptor(ChatPanel),
 		canToggleVisibility: true,
+		hideByDefault: false,
 		order: 4
 	}
 ], openNovelViewContainer);
