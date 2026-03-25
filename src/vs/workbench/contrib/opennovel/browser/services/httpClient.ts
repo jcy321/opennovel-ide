@@ -54,7 +54,7 @@ export class HttpClient implements IHttpClient {
 
 		for (let attempt = 0; attempt <= this.retries; attempt++) {
 			try {
-				const options = {
+				const options: any = {
 					type: method as 'GET' | 'POST' | 'PUT' | 'DELETE',
 					url,
 					headers: { 'Content-Type': 'application/json' },
