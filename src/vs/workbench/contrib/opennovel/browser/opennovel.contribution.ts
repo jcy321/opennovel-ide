@@ -47,6 +47,7 @@ Registry.as<IViewsRegistry>(ViewExtensions.ViewsRegistry).registerViews([
 		name: { value: localize('books', "Books"), original: 'Books' },
 		containerIcon: Codicon.book,
 		ctorDescriptor: new SyncDescriptor(BookExplorerView),
+		canToggleVisibility: true,
 		order: 1
 	},
 	{
@@ -54,6 +55,7 @@ Registry.as<IViewsRegistry>(ViewExtensions.ViewsRegistry).registerViews([
 		name: { value: localize('knowledge', "Knowledge"), original: 'Knowledge' },
 		containerIcon: Codicon.database,
 		ctorDescriptor: new SyncDescriptor(KnowledgeView),
+		canToggleVisibility: true,
 		order: 2
 	},
 	{
@@ -61,6 +63,7 @@ Registry.as<IViewsRegistry>(ViewExtensions.ViewsRegistry).registerViews([
 		name: { value: localize('agents', "Agents"), original: 'Agents' },
 		containerIcon: Codicon.robot,
 		ctorDescriptor: new SyncDescriptor(AgentStatusView),
+		canToggleVisibility: true,
 		order: 3
 	},
 	{
@@ -68,6 +71,7 @@ Registry.as<IViewsRegistry>(ViewExtensions.ViewsRegistry).registerViews([
 		name: { value: localize('chat', "Chat"), original: 'Chat' },
 		containerIcon: Codicon.commentDiscussion,
 		ctorDescriptor: new SyncDescriptor(ChatPanel),
+		canToggleVisibility: true,
 		order: 4
 	}
 ], openNovelViewContainer);
